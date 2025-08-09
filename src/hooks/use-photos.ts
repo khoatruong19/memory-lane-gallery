@@ -2,18 +2,22 @@ import { useState } from 'react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 
+import type { Id } from '../../convex/_generated/dataModel'
+
 export interface Photo {
-  _id: string
+  _id: Id<"photos">
+  _creationTime: number
   title?: string
   description?: string
-  imageUrl?: string
+  imageUrl: string | null
+  imageId: Id<"_storage">
   tags: string[]
   isFavorite: boolean
   uploadedAt: number
 }
 
 export function usePhotos() {
-  const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set())
+  const [downloadingIds, setDownloadingIds] = useState<Set<Id<"photos">>>(new Set())
 
   // Convex hooks
   const photos = useQuery(api.photos.getAllPhotos)
@@ -56,9 +60,9 @@ export function usePhotos() {
     }
   }
 
-  const handleToggleFavorite = async (id: string) => {
+  const handleToggleFavorite = async (id: Id<"photos">) => {
     try {
-      await toggleFavorite({ id: id as any })
+      await toggleFavorite({ id })
     } catch (error) {
       console.error('Toggle favorite failed:', error)
       throw error
@@ -109,7 +113,7 @@ export function usePhotos() {
 
   const handleDelete = async (photo: Photo) => {
     try {
-      await deletePhoto({ id: photo._id as any })
+      await deletePhoto({ id: photo._id })
     } catch (error) {
       console.error('Delete failed:', error)
       alert('Failed to delete photo. Please try again.')
@@ -120,7 +124,7 @@ export function usePhotos() {
   const handleEdit = async (photo: Photo, updates: { description: string; tags: string[] }) => {
     try {
       await updatePhoto({ 
-        id: photo._id as any,
+        id: photo._id,
         description: updates.description,
         tags: updates.tags
       })

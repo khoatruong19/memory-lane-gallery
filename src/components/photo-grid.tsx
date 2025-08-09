@@ -3,29 +3,22 @@ import { Heart, Download, Eye, Loader2, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import type { Photo } from "@/hooks/use-photos"
 
-interface Photo {
-  _id: string
-  title?: string
-  description?: string
-  imageUrl?: string
-  tags: string[]
-  isFavorite: boolean
-  uploadedAt: number
-}
+import type { Id } from '../../convex/_generated/dataModel'
 
 interface PhotoGridProps {
   photos: Photo[]
-  onToggleFavorite?: (id: string) => void
+  onToggleFavorite?: (id: Id<"photos">) => void
   onImageClick?: (photo: Photo) => void
   onDownload?: (photo: Photo) => void
   onDelete?: (photo: Photo) => void
   onTagClick?: (tag: string) => void
-  downloadingIds?: Set<string>
+  downloadingIds?: Set<Id<"photos">>
 }
 
 export function PhotoGrid({ photos, onToggleFavorite, onImageClick, onDownload, onDelete, onTagClick, downloadingIds }: PhotoGridProps) {
-  const [hoveredPhoto, setHoveredPhoto] = useState<string | null>(null)
+  const [hoveredPhoto, setHoveredPhoto] = useState<Id<"photos"> | null>(null)
 
   const handleDownload = async (photo: Photo) => {
     if (onDownload) {

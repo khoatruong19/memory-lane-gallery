@@ -3,16 +3,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { X, Save, Tag as TagIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-
-interface Photo {
-  _id: string
-  title?: string
-  description?: string
-  imageUrl?: string
-  tags: string[]
-  isFavorite: boolean
-  uploadedAt: number
-}
+import type { Photo } from "@/hooks/use-photos"
 
 interface EditPhotoModalProps {
   isOpen: boolean

@@ -2,16 +2,7 @@ import { motion } from "framer-motion"
 import { X, Hash } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-
-interface Photo {
-  _id: string
-  title?: string
-  description?: string
-  imageUrl?: string
-  tags: string[]
-  isFavorite: boolean
-  uploadedAt: number
-}
+import type { Photo } from "@/hooks/use-photos"
 
 interface TagFilterProps {
   photos: Photo[]

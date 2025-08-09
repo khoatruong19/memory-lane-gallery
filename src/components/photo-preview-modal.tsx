@@ -4,21 +4,14 @@ import { X, Heart, Download, Calendar, Tag as TagIcon, ChevronLeft, ChevronRight
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-interface Photo {
-  _id: string
-  title: string
-  description?: string
-  imageUrl?: string
-  tags: string[]
-  isFavorite: boolean
-  uploadedAt: number
-}
+import type { Photo } from '@/hooks/use-photos'
+import type { Id } from '../../convex/_generated/dataModel'
 
 interface PhotoPreviewModalProps {
   isOpen: boolean
   photo: Photo | null
   onClose: () => void
-  onToggleFavorite?: (id: string) => void
+  onToggleFavorite?: (id: Id<"photos">) => void
   onTagClick?: (tag: string) => void
   onEdit?: (photo: Photo) => void
   onDelete?: (photo: Photo) => void
@@ -56,8 +49,8 @@ export function PhotoPreviewModal({
       const link = document.createElement('a')
       link.href = url
 
-      // Clean filename from photo title
-      const filename = `${photo.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.jpg`
+      // Clean filename from photo title or use timestamp
+      const filename = `${(photo.title || `memory_${new Date(photo.uploadedAt).toISOString().slice(0, 10)}`).replace(/[^a-z0-9]/gi, '_').toLowerCase()}.jpg`
       link.download = filename
 
       document.body.appendChild(link)
