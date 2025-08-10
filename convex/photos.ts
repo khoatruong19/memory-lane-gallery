@@ -38,6 +38,39 @@ export const getAllPhotos = query({
   },
 });
 
+export const getPhotosPaginated = query({
+  args: { 
+    limit: v.number(),
+    cursor: v.optional(v.string())
+  },
+  handler: async (ctx, args) => {
+    let query = ctx.db
+      .query("photos")
+      .order("desc");
+
+    if (args.cursor) {
+      query = query.filter(q => q.lt(q.field("_creationTime"), parseInt(args.cursor)));
+    }
+
+    const photos = await query.take(args.limit + 1);
+    const hasNextPage = photos.length > args.limit;
+    const photosToReturn = hasNextPage ? photos.slice(0, -1) : photos;
+    
+    const photosWithUrls = await Promise.all(
+      photosToReturn.map(async (photo) => ({
+        ...photo,
+        imageUrl: await ctx.storage.getUrl(photo.imageId),
+      }))
+    );
+
+    return {
+      photos: photosWithUrls,
+      hasNextPage,
+      nextCursor: hasNextPage ? photos[photos.length - 2]._creationTime.toString() : null
+    };
+  },
+});
+
 export const getFavorites = query({
   handler: async (ctx) => {
     const favorites = await ctx.db

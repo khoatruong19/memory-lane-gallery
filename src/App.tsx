@@ -9,7 +9,7 @@ import { UploadZone } from '@/components/upload-zone'
 import { PhotoPreviewModal } from '@/components/photo-preview-modal'
 import { EditPhotoModal } from '@/components/edit-photo-modal'
 import { PhotoSkeleton } from '@/components/photo-skeleton'
-import { usePhotos } from '@/hooks/use-photos'
+import { usePhotosPaginated } from '@/hooks/use-photos-paginated'
 import { useModal } from '@/hooks/use-modal'
 
 function App() {
@@ -19,7 +19,19 @@ function App() {
   const [editingPhoto, setEditingPhoto] = useState<any | null>(null)
 
   // Custom hooks
-  const { photos, isLoading, downloadingIds, handleUpload, handleToggleFavorite, handleDownload, handleDelete, handleEdit } = usePhotos()
+  const { 
+    photos, 
+    isLoading, 
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+    downloadingIds, 
+    handleUpload, 
+    handleToggleFavorite, 
+    handleDownload, 
+    handleDelete, 
+    handleEdit 
+  } = usePhotosPaginated()
   const {
     selectedPhoto,
     isModalOpen,
@@ -141,6 +153,9 @@ function App() {
             onDelete={handleDelete}
             onTagClick={handleTagClick}
             downloadingIds={downloadingIds}
+            hasNextPage={hasNextPage}
+            isFetchingNextPage={isFetchingNextPage}
+            fetchNextPage={fetchNextPage}
           />
         ) : (
           <EmptyState

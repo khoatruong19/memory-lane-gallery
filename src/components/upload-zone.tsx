@@ -4,6 +4,7 @@ import { Upload, Heart, Tag, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
+import { compressMultipleImages, type CompressionResult } from "@/lib/image-compression"
 
 interface UploadZoneProps {
   onUpload?: (files: FileList, metadata: { description: string; tags: string[] }) => void
@@ -17,6 +18,8 @@ export function UploadZone({ onUpload, className }: UploadZoneProps) {
   const [description, setDescription] = useState("")
   const [tags, setTags] = useState("")
   const [isUploading, setIsUploading] = useState(false)
+  const [isCompressing, setIsCompressing] = useState(false)
+  const [compressionResults, setCompressionResults] = useState<CompressionResult[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -51,36 +54,60 @@ export function UploadZone({ onUpload, className }: UploadZoneProps) {
     return { valid: dataTransfer.files, invalid: invalidFiles }
   }
 
-  const handleDrop = (e: React.DragEvent) => {
+  const compressFiles = async (files: FileList) => {
+    setIsCompressing(true)
+    try {
+      const results = await compressMultipleImages(files, {
+        maxWidth: 1920,
+        maxHeight: 1920,
+        quality: 0.85,
+        maxSizeKB: 500
+      })
+
+      setCompressionResults(results)
+
+      // Create new FileList with compressed files
+      const dataTransfer = new DataTransfer()
+      results.forEach(result => dataTransfer.items.add(result.file))
+
+      return dataTransfer.files
+    } finally {
+      setIsCompressing(false)
+    }
+  }
+
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault()
     setIsDragOver(false)
-    
+
     const files = e.dataTransfer.files
     if (files.length > 0) {
       const { valid, invalid } = validateFiles(files)
-      
+
       if (invalid.length > 0) {
         alert(`Some files were skipped:\n${invalid.join('\n')}`)
       }
-      
+
       if (valid.length > 0) {
-        setSelectedFiles(valid)
+        const compressedFiles = await compressFiles(valid)
+        setSelectedFiles(compressedFiles)
         setShowMetadata(true)
       }
     }
   }
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (files && files.length > 0) {
       const { valid, invalid } = validateFiles(files)
-      
+
       if (invalid.length > 0) {
         alert(`Some files were skipped:\n${invalid.join('\n')}`)
       }
-      
+
       if (valid.length > 0) {
-        setSelectedFiles(valid)
+        const compressedFiles = await compressFiles(valid)
+        setSelectedFiles(compressedFiles)
         setShowMetadata(true)
       }
     }
@@ -94,17 +121,18 @@ export function UploadZone({ onUpload, className }: UploadZoneProps) {
           .split(",")
           .map((tag) => tag.trim())
           .filter((tag) => tag.length > 0)
-        
+
         await onUpload?.(selectedFiles, {
           description: description.trim(),
           tags: tagsArray,
         })
-        
+
         // Reset form
         setSelectedFiles(null)
         setShowMetadata(false)
         setDescription("")
         setTags("")
+        setCompressionResults([])
         if (fileInputRef.current) {
           fileInputRef.current.value = ""
         }
@@ -121,6 +149,7 @@ export function UploadZone({ onUpload, className }: UploadZoneProps) {
     setShowMetadata(false)
     setDescription("")
     setTags("")
+    setCompressionResults([])
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
     }
@@ -143,18 +172,28 @@ export function UploadZone({ onUpload, className }: UploadZoneProps) {
                 <p className="text-sm text-gray-600 mb-4">
                   {selectedFiles.length} photo{selectedFiles.length !== 1 ? 's' : ''} selected
                 </p>
-                
-                {/* Show file list */}
+
+                {/* Show file list with compression info */}
                 <div className="max-h-32 overflow-y-auto bg-gray-50 rounded-lg p-3 mb-4">
                   <div className="space-y-1">
-                    {Array.from(selectedFiles).map((file, index) => (
-                      <div key={index} className="flex items-center justify-between text-xs">
-                        <span className="truncate flex-1 text-left">{file.name}</span>
-                        <span className="text-gray-500 ml-2">
-                          {(file.size / 1024 / 1024).toFixed(1)}MB
-                        </span>
-                      </div>
-                    ))}
+                    {Array.from(selectedFiles).map((file, index) => {
+                      const result = compressionResults[index]
+                      return (
+                        <div key={index} className="flex items-center justify-between text-xs">
+                          <span className="truncate flex-1 text-left">{file.name}</span>
+                          <div className="text-right ml-2">
+                            <div className="text-gray-500">
+                              {(file.size / 1024 / 1024).toFixed(1)}MB
+                            </div>
+                            {result && result.compressionRatio > 0 && (
+                              <div className="text-green-600 text-xs">
+                                -{result.compressionRatio}%
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               </div>
@@ -248,7 +287,7 @@ export function UploadZone({ onUpload, className }: UploadZoneProps) {
           onChange={handleFileSelect}
           className="hidden"
         />
-        
+
         <motion.div
           animate={{
             scale: isDragOver ? 1.1 : 1,
@@ -259,7 +298,7 @@ export function UploadZone({ onUpload, className }: UploadZoneProps) {
         >
           <Upload className="w-12 h-12 sm:w-16 sm:h-16 mx-auto text-pink-400 group-hover:text-pink-500 transition-colors" />
         </motion.div>
-        
+
         <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-2">
           Upload Your Memories
         </h3>
@@ -268,8 +307,18 @@ export function UploadZone({ onUpload, className }: UploadZoneProps) {
           <span className="sm:hidden">Tap to select your photos</span>
         </p>
         <p className="text-xs sm:text-sm text-gray-500">
-          Supports JPG, PNG and other image formats • Multiple files supported • 10MB max per file
+          Supports JPG, PNG and other image formats • Multiple files supported • Auto-compressed to ~500KB
         </p>
+        {(isCompressing || isUploading) && (
+          <div className="absolute inset-0 bg-white/80 flex items-center justify-center rounded-xl sm:rounded-2xl">
+            <div className="flex items-center space-x-2 text-pink-600">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span className="text-sm font-medium">
+                {isCompressing ? "Optimizing images..." : "Uploading..."}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
     </motion.div>
   )

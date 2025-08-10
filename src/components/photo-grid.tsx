@@ -4,6 +4,7 @@ import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import type { Photo } from "@/hooks/use-photos"
+import { useInfiniteScroll } from "@/hooks/use-infinite-scroll"
 
 import type { Id } from '../../convex/_generated/dataModel'
 
@@ -15,10 +16,30 @@ interface PhotoGridProps {
   onDelete?: (photo: Photo) => void
   onTagClick?: (tag: string) => void
   downloadingIds?: Set<Id<"photos">>
+  hasNextPage?: boolean
+  isFetchingNextPage?: boolean
+  fetchNextPage?: () => void
 }
 
-export function PhotoGrid({ photos, onToggleFavorite, onImageClick, onDownload, onDelete, onTagClick, downloadingIds }: PhotoGridProps) {
+export function PhotoGrid({ 
+  photos, 
+  onToggleFavorite, 
+  onImageClick, 
+  onDownload, 
+  onDelete, 
+  onTagClick, 
+  downloadingIds,
+  hasNextPage = false,
+  isFetchingNextPage = false,
+  fetchNextPage
+}: PhotoGridProps) {
   const [hoveredPhoto, setHoveredPhoto] = useState<Id<"photos"> | null>(null)
+
+  const { loadMoreRef } = useInfiniteScroll({
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage: fetchNextPage || (() => {})
+  })
 
   const handleDownload = async (photo: Photo) => {
     if (onDownload) {
@@ -45,8 +66,9 @@ export function PhotoGrid({ photos, onToggleFavorite, onImageClick, onDownload, 
   }
 
   return (
-    <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6 p-3 sm:p-4 lg:p-6">
-      {photos.map((photo, index) => (
+    <div>
+      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6 p-3 sm:p-4 lg:p-6">
+        {photos.map((photo, index) => (
         <motion.div
           key={photo._id}
           initial={{ opacity: 0, y: 20 }}
@@ -240,7 +262,29 @@ export function PhotoGrid({ photos, onToggleFavorite, onImageClick, onDownload, 
             </div>
           </div>
         </motion.div>
-      ))}
+        ))}
+      </div>
+      
+      {/* Infinite scroll trigger and loading indicator */}
+      <div 
+        ref={loadMoreRef} 
+        className="flex justify-center items-center py-8"
+      >
+        {isFetchingNextPage ? (
+          <div className="flex items-center space-x-2 text-pink-600">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span className="text-sm font-medium">Loading more photos...</span>
+          </div>
+        ) : hasNextPage ? (
+          <div className="text-gray-400 text-sm">
+            Scroll to load more photos
+          </div>
+        ) : photos.length > 0 ? (
+          <div className="text-gray-400 text-sm">
+            You've reached the end! 🎉
+          </div>
+        ) : null}
+      </div>
     </div>
   )
 }
