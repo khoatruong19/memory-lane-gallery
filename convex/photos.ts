@@ -2,8 +2,8 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 export const upload = mutation({
-  args: { 
-    title: v.optional(v.string()), 
+  args: {
+    title: v.optional(v.string()),
     description: v.optional(v.string()),
     imageId: v.id("_storage"),
     tags: v.array(v.string()),
@@ -28,7 +28,7 @@ export const getAllPhotos = query({
       .query("photos")
       .order("desc")
       .collect();
-    
+
     return await Promise.all(
       photos.map(async (photo) => ({
         ...photo,
@@ -39,7 +39,7 @@ export const getAllPhotos = query({
 });
 
 export const getPhotosPaginated = query({
-  args: { 
+  args: {
     limit: v.number(),
     cursor: v.optional(v.string())
   },
@@ -49,13 +49,13 @@ export const getPhotosPaginated = query({
       .order("desc");
 
     if (args.cursor) {
-      query = query.filter(q => q.lt(q.field("_creationTime"), parseInt(args.cursor)));
+      query = query.filter(q => q.lt(q.field("_creationTime"), parseInt(args.cursor ?? "")));
     }
 
     const photos = await query.take(args.limit + 1);
     const hasNextPage = photos.length > args.limit;
     const photosToReturn = hasNextPage ? photos.slice(0, -1) : photos;
-    
+
     const photosWithUrls = await Promise.all(
       photosToReturn.map(async (photo) => ({
         ...photo,
@@ -78,7 +78,7 @@ export const getFavorites = query({
       .filter((q) => q.eq(q.field("isFavorite"), true))
       .order("desc")
       .collect();
-    
+
     return await Promise.all(
       favorites.map(async (photo) => ({
         ...photo,
@@ -95,7 +95,7 @@ export const toggleFavorite = mutation({
     if (!photo) {
       throw new Error("Photo not found");
     }
-    
+
     await ctx.db.patch(args.id, {
       isFavorite: !photo.isFavorite,
     });
@@ -113,17 +113,17 @@ export const deletePhoto = mutation({
     if (!photo) {
       throw new Error("Photo not found");
     }
-    
+
     // Delete the image from storage
     await ctx.storage.delete(photo.imageId);
-    
+
     // Delete the photo record from database
     await ctx.db.delete(args.id);
   },
 });
 
 export const updatePhoto = mutation({
-  args: { 
+  args: {
     id: v.id("photos"),
     description: v.optional(v.string()),
     tags: v.array(v.string())
@@ -133,7 +133,7 @@ export const updatePhoto = mutation({
     if (!photo) {
       throw new Error("Photo not found");
     }
-    
+
     // Update photo metadata
     await ctx.db.patch(args.id, {
       description: args.description,
